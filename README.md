@@ -1,3 +1,3 @@
 # foot-synth
 Sound Synthesizer made whilst following javidx's tutorial.
-I made this to learn C++ and also because music is a passion of mine.
+I made this to learn C++ and to get a better feel as to how synths work, as an introduction to sound design and synthesis.
