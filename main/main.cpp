@@ -1,3 +1,44 @@
+/*
+OneLoneCoder.com - Simple Audio Noisy Thing
+"Allows you to simply listen to that waveform!" - @Javidx9
+License
+~~~~~~~
+Copyright (C) 2018  Javidx9
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it
+under certain conditions; See license for details.
+Original works located at:
+https://www.github.com/onelonecoder
+https://www.onelonecoder.com
+https://www.youtube.com/javidx9
+GNU GPLv3
+https://github.com/OneLoneCoder/videos/blob/master/LICENSE
+From Javidx9 :)
+~~~~~~~~~~~~~~~
+Hello! Ultimately I don't care what you use this for. It's intended to be
+educational, and perhaps to the oddly minded - a little bit of fun.
+Please hack this, change it and use it in any way you see fit. You acknowledge
+that I am not responsible for anything bad that happens as a result of
+your actions. However this code is protected by GNU GPLv3, see the license in the
+github repo. This means you must attribute me if you use it. You can view this
+license here: https://github.com/OneLoneCoder/videos/blob/master/LICENSE
+Cheers!
+Author
+~~~~~~
+Twitter: @javidx9
+Blog: www.onelonecoder.com
+Versions
+~~~~~~~~
+main2.cpp
+This version expands on oscillators to include other waveforms
+and introduces envelopes
+See Video: https://youtu.be/OSCzKOqtgcA
+main1.cpp
+This is the first version of the software. It presents a simple
+keyboard and a sine wave oscillator.
+See video: https://youtu.be/tgamhuQnOkM
+*/
+
 #include <iostream>
 using namespace std;
 
@@ -156,7 +197,7 @@ double MakeNoise(double dTime)
 int main()
 {
 	// Shameless self-promotion
-	wcout << "footvaalvica running through one lode coder's tutorial" << endl << "Multiple Oscillators with Single Amplitude Envelope, No Polyphony" << endl << endl;
+	wcout << "www.OneLoneCoder.com - Synthesizer Part 2" << endl << "Multiple Oscillators with Single Amplitude Envelope, No Polyphony" << endl << endl;
 
 	// Get all sound hardware
 	vector<wstring> devices = olcNoiseMaker<short>::Enumerate();
@@ -171,7 +212,7 @@ int main()
 		"|   | S |   |   | F | | G |   |   | J | | K | | L |   |   |" << endl <<
 		"|   |___|   |   |___| |___|   |   |___| |___| |___|   |   |__" << endl <<
 		"|     |     |     |     |     |     |     |     |     |     |" << endl <<
-		"|  Z  |  X  |  C  |  V  |  B  |  N  |  M  |  ,  |  .  |  -  |" << endl <<
+		"|  Z  |  X  |  C  |  V  |  B  |  N  |  M  |  ,  |  .  |  /  |" << endl <<
 		"|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|" << endl << endl;
 
 	// Create sound machine!!
@@ -189,7 +230,7 @@ int main()
 		bKeyPressed = false;
 		for (int k = 0; k < 16; k++)
 		{
-			if (GetAsyncKeyState((unsigned char)("ZSXCFVGBNJMK\xbcL\xbe\xbd"[k])) & 0x8000)
+			if (GetAsyncKeyState((unsigned char)("ZSXCFVGBNJMK\xbcL\xbe\xbf"[k])) & 0x8000)
 			{
 				if (nCurrentKey != k)
 				{
