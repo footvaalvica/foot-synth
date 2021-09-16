@@ -534,7 +534,7 @@ int main()
 
 
 	// Shameless self-promotion
-	wcout << "footvaalvica following onelonecoder's tutorial - Part 4 << endl
+	wcout << "footvaalvica following onelonecoder's tutorial - Part 4" << endl
 		<< "Multiple FM Oscillators, Sequencing, Polyphony" << endl << endl;
 
 	// Get all sound hardware
