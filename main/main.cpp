@@ -29,6 +29,9 @@ Twitter: @javidx9
 Blog: www.onelonecoder.com
 Versions
 ~~~~~~~~
+main4.cpp
+Adjusted the definition of a note, and added a sequencer.
+See Video: https://youtu.be/roRH3PdTajs
 main3a.cpp
 This adds polyphony, frequency modulation and instruments.
 See Video: https://youtu.be/kDuvruJTjOs
@@ -41,8 +44,6 @@ This is the first version of the software. It presents a simple
 keyboard and a sine wave oscillator.
 See video: https://youtu.be/tgamhuQnOkM
 */
-
-
 
 #include <list>
 #include <iostream>
@@ -64,6 +65,8 @@ namespace synth
 		return dHertz * 2.0 * PI;
 	}
 
+	struct instrument_base;
+
 	// A basic note
 	struct note
 	{
@@ -71,7 +74,7 @@ namespace synth
 		FTYPE on;	// Time note was activated
 		FTYPE off;	// Time note was deactivated
 		bool active;
-		int channel;
+		instrument_base* channel;
 
 		note()
 		{
@@ -79,8 +82,10 @@ namespace synth
 			on = 0.0;
 			off = 0.0;
 			active = false;
-			channel = 0;
+			channel = nullptr;
 		}
+
+		//bool operator==(const note& n1, const note& n2) { return n1.id == n2.id; }
 	};
 
 	//////////////////////////////////////////////////////////////////////////////
@@ -96,7 +101,7 @@ namespace synth
 		const FTYPE dLFOHertz = 0.0, const FTYPE dLFOAmplitude = 0.0, FTYPE dCustom = 50.0)
 	{
 
-		FTYPE dFreq = w(dHertz) * dTime + dLFOAmplitude * dHertz * (sin(w(dLFOHertz) * dTime));// osc(dTime, dLFOHertz, OSC_SINE);
+		FTYPE dFreq = w(dHertz) * dTime + dLFOAmplitude * dHertz * (sin(w(dLFOHertz) * dTime));
 
 		switch (nType)
 		{
@@ -138,7 +143,7 @@ namespace synth
 		switch (nScaleID)
 		{
 		case SCALE_DEFAULT: default:
-			return 256 * pow(1.0594630943592952645618252949463, nNoteID);
+			return 8 * pow(1.0594630943592952645618252949463, nNoteID);
 		}
 	}
 
@@ -203,7 +208,7 @@ namespace synth
 			}
 
 			// Amplitude should not be negative
-			if (dAmplitude <= 0.000)
+			if (dAmplitude <= 0.01)
 				dAmplitude = 0.0;
 
 			return dAmplitude;
@@ -220,6 +225,8 @@ namespace synth
 	{
 		FTYPE dVolume;
 		synth::envelope_adsr env;
+		FTYPE fMaxLifeTime;
+		wstring name;
 		virtual FTYPE sound(const FTYPE dTime, synth::note n, bool& bNoteFinished) = 0;
 	};
 
@@ -231,8 +238,9 @@ namespace synth
 			env.dDecayTime = 1.0;
 			env.dSustainAmplitude = 0.0;
 			env.dReleaseTime = 1.0;
-
+			fMaxLifeTime = 3.0;
 			dVolume = 1.0;
+			name = L"Bell";
 		}
 
 		virtual FTYPE sound(const FTYPE dTime, synth::note n, bool& bNoteFinished)
@@ -241,9 +249,9 @@ namespace synth
 			if (dAmplitude <= 0.0) bNoteFinished = true;
 
 			FTYPE dSound =
-				+1.00 * synth::osc(n.on - dTime, synth::scale(n.id + 12), synth::OSC_SINE, 5.0, 0.001)
-				+ 0.50 * synth::osc(n.on - dTime, synth::scale(n.id + 24))
-				+ 0.25 * synth::osc(n.on - dTime, synth::scale(n.id + 36));
+				+1.00 * synth::osc(dTime - n.on, synth::scale(n.id + 12), synth::OSC_SINE, 5.0, 0.001)
+				+ 0.50 * synth::osc(dTime - n.on, synth::scale(n.id + 24))
+				+ 0.25 * synth::osc(dTime - n.on, synth::scale(n.id + 36));
 
 			return dAmplitude * dSound * dVolume;
 		}
@@ -258,8 +266,9 @@ namespace synth
 			env.dDecayTime = 0.5;
 			env.dSustainAmplitude = 0.8;
 			env.dReleaseTime = 1.0;
-
+			fMaxLifeTime = 3.0;
 			dVolume = 1.0;
+			name = L"8-Bit Bell";
 		}
 
 		virtual FTYPE sound(const FTYPE dTime, synth::note n, bool& bNoteFinished)
@@ -268,9 +277,9 @@ namespace synth
 			if (dAmplitude <= 0.0) bNoteFinished = true;
 
 			FTYPE dSound =
-				+1.00 * synth::osc(n.on - dTime, synth::scale(n.id), synth::OSC_SQUARE, 5.0, 0.001)
-				+ 0.50 * synth::osc(n.on - dTime, synth::scale(n.id + 12))
-				+ 0.25 * synth::osc(n.on - dTime, synth::scale(n.id + 24));
+				+1.00 * synth::osc(dTime - n.on, synth::scale(n.id), synth::OSC_SQUARE, 5.0, 0.001)
+				+ 0.50 * synth::osc(dTime - n.on, synth::scale(n.id + 12))
+				+ 0.25 * synth::osc(dTime - n.on, synth::scale(n.id + 24));
 
 			return dAmplitude * dSound * dVolume;
 		}
@@ -281,12 +290,13 @@ namespace synth
 	{
 		instrument_harmonica()
 		{
-			env.dAttackTime = 0.05;
+			env.dAttackTime = 0.00;
 			env.dDecayTime = 1.0;
 			env.dSustainAmplitude = 0.95;
 			env.dReleaseTime = 0.1;
-
-			dVolume = 1.0;
+			fMaxLifeTime = -1.0;
+			name = L"Harmonica";
+			dVolume = 0.3;
 		}
 
 		virtual FTYPE sound(const FTYPE dTime, synth::note n, bool& bNoteFinished)
@@ -295,13 +305,177 @@ namespace synth
 			if (dAmplitude <= 0.0) bNoteFinished = true;
 
 			FTYPE dSound =
-				//+ 1.0  * synth::osc(n.on - dTime, synth::scale(n.id-12), synth::OSC_SAW_ANA, 5.0, 0.001, 100)
-				+1.00 * synth::osc(n.on - dTime, synth::scale(n.id), synth::OSC_SQUARE, 5.0, 0.001)
-				+ 0.50 * synth::osc(n.on - dTime, synth::scale(n.id + 12), synth::OSC_SQUARE)
-				+ 0.05 * synth::osc(n.on - dTime, synth::scale(n.id + 24), synth::OSC_NOISE);
+				+1.0 * synth::osc(n.on - dTime, synth::scale(n.id - 12), synth::OSC_SAW_ANA, 5.0, 0.001, 100)
+				+ 1.00 * synth::osc(dTime - n.on, synth::scale(n.id), synth::OSC_SQUARE, 5.0, 0.001)
+				+ 0.50 * synth::osc(dTime - n.on, synth::scale(n.id + 12), synth::OSC_SQUARE)
+				+ 0.05 * synth::osc(dTime - n.on, synth::scale(n.id + 24), synth::OSC_NOISE);
 
 			return dAmplitude * dSound * dVolume;
 		}
+
+	};
+
+
+	struct instrument_drumkick : public instrument_base
+	{
+		instrument_drumkick()
+		{
+			env.dAttackTime = 0.01;
+			env.dDecayTime = 0.15;
+			env.dSustainAmplitude = 0.0;
+			env.dReleaseTime = 0.0;
+			fMaxLifeTime = 1.5;
+			name = L"Drum Kick";
+			dVolume = 1.0;
+		}
+
+		virtual FTYPE sound(const FTYPE dTime, synth::note n, bool& bNoteFinished)
+		{
+			FTYPE dAmplitude = synth::env(dTime, env, n.on, n.off);
+			if (fMaxLifeTime > 0.0 && dTime - n.on >= fMaxLifeTime)	bNoteFinished = true;
+
+			FTYPE dSound =
+				+0.99 * synth::osc(dTime - n.on, synth::scale(n.id - 36), synth::OSC_SINE, 1.0, 1.0)
+				+ 0.01 * synth::osc(dTime - n.on, 0, synth::OSC_NOISE);
+
+			return dAmplitude * dSound * dVolume;
+		}
+
+	};
+
+	struct instrument_drumsnare : public instrument_base
+	{
+		instrument_drumsnare()
+		{
+			env.dAttackTime = 0.0;
+			env.dDecayTime = 0.2;
+			env.dSustainAmplitude = 0.0;
+			env.dReleaseTime = 0.0;
+			fMaxLifeTime = 1.0;
+			name = L"Drum Snare";
+			dVolume = 1.0;
+		}
+
+		virtual FTYPE sound(const FTYPE dTime, synth::note n, bool& bNoteFinished)
+		{
+			FTYPE dAmplitude = synth::env(dTime, env, n.on, n.off);
+			if (fMaxLifeTime > 0.0 && dTime - n.on >= fMaxLifeTime)	bNoteFinished = true;
+
+			FTYPE dSound =
+				+0.5 * synth::osc(dTime - n.on, synth::scale(n.id - 24), synth::OSC_SINE, 0.5, 1.0)
+				+ 0.5 * synth::osc(dTime - n.on, 0, synth::OSC_NOISE);
+
+			return dAmplitude * dSound * dVolume;
+		}
+
+	};
+
+
+	struct instrument_drumhihat : public instrument_base
+	{
+		instrument_drumhihat()
+		{
+			env.dAttackTime = 0.01;
+			env.dDecayTime = 0.05;
+			env.dSustainAmplitude = 0.0;
+			env.dReleaseTime = 0.0;
+			fMaxLifeTime = 1.0;
+			name = L"Drum HiHat";
+			dVolume = 0.5;
+		}
+
+		virtual FTYPE sound(const FTYPE dTime, synth::note n, bool& bNoteFinished)
+		{
+			FTYPE dAmplitude = synth::env(dTime, env, n.on, n.off);
+			if (fMaxLifeTime > 0.0 && dTime - n.on >= fMaxLifeTime)	bNoteFinished = true;
+
+			FTYPE dSound =
+				+0.1 * synth::osc(dTime - n.on, synth::scale(n.id - 12), synth::OSC_SQUARE, 1.5, 1)
+				+ 0.9 * synth::osc(dTime - n.on, 0, synth::OSC_NOISE);
+
+			return dAmplitude * dSound * dVolume;
+		}
+
+	};
+
+
+	struct sequencer
+	{
+	public:
+		struct channel
+		{
+			instrument_base* instrument;
+			wstring sBeat;
+		};
+
+	public:
+		sequencer(float tempo = 120.0f, int beats = 4, int subbeats = 4)
+		{
+			nBeats = beats;
+			nSubBeats = subbeats;
+			fTempo = tempo;
+			fBeatTime = (60.0f / fTempo) / (float)nSubBeats;
+			nCurrentBeat = 0;
+			nTotalBeats = nSubBeats * nBeats;
+			fAccumulate = 0;
+		}
+
+
+		int Update(FTYPE fElapsedTime)
+		{
+			vecNotes.clear();
+
+			fAccumulate += fElapsedTime;
+			while (fAccumulate >= fBeatTime)
+			{
+				fAccumulate -= fBeatTime;
+				nCurrentBeat++;
+
+				if (nCurrentBeat >= nTotalBeats)
+					nCurrentBeat = 0;
+
+				int c = 0;
+				for (auto v : vecChannel)
+				{
+					if (v.sBeat[nCurrentBeat] == L'X')
+					{
+						note n;
+						n.channel = vecChannel[c].instrument;
+						n.active = true;
+						n.id = 64;
+						vecNotes.push_back(n);
+					}
+					c++;
+				}
+			}
+
+
+
+			return vecNotes.size();
+		}
+
+		void AddInstrument(instrument_base* inst)
+		{
+			channel c;
+			c.instrument = inst;
+			vecChannel.push_back(c);
+		}
+
+	public:
+		int nBeats;
+		int nSubBeats;
+		FTYPE fTempo;
+		FTYPE fBeatTime;
+		FTYPE fAccumulate;
+		int nCurrentBeat;
+		int nTotalBeats;
+
+	public:
+		vector<channel> vecChannel;
+		vector<note> vecNotes;
+
+
+	private:
 
 	};
 
@@ -311,8 +485,9 @@ vector<synth::note> vecNotes;
 mutex muxNotes;
 synth::instrument_bell instBell;
 synth::instrument_harmonica instHarm;
-
-
+synth::instrument_drumkick instKick;
+synth::instrument_drumsnare instSnare;
+synth::instrument_drumhihat instHiHat;
 
 typedef bool(*lambda)(synth::note const& item);
 template<class T>
@@ -333,94 +508,116 @@ FTYPE MakeNoise(int nChannel, FTYPE dTime)
 	unique_lock<mutex> lm(muxNotes);
 	FTYPE dMixedOutput = 0.0;
 
+	// Iterate through all active notes, and mix together
 	for (auto& n : vecNotes)
 	{
 		bool bNoteFinished = false;
 		FTYPE dSound = 0;
-		if (n.channel == 2)
-			dSound = instBell.sound(dTime, n, bNoteFinished);
-		if (n.channel == 1)
-			dSound = instHarm.sound(dTime, n, bNoteFinished) * 0.5;
+
+		// Get sample for this note by using the correct instrument and envelope
+		if (n.channel != nullptr)
+			dSound = n.channel->sound(dTime, n, bNoteFinished);
+
+		// Mix into output
 		dMixedOutput += dSound;
 
-		if (bNoteFinished && n.off > n.on)
+		if (bNoteFinished) // Flag note to be removed
 			n.active = false;
 	}
-
-	// Woah! Modern C++ Overload!!!
+	// Woah! Modern C++ Overload!!! Remove notes which are now inactive
 	safe_remove<vector<synth::note>>(vecNotes, [](synth::note const& item) { return item.active; });
-
-
 	return dMixedOutput * 0.2;
 }
 
 int main()
 {
+
+
 	// Shameless self-promotion
-	wcout << "footvaalvica following onelonecoder's tutorial on youtube" << endl << "Multiple Oscillators with Polyphony" << endl << endl;
+	wcout << "footvaalvica following onelonecoder's tutorial - Part 4 << endl
+		<< "Multiple FM Oscillators, Sequencing, Polyphony" << endl << endl;
 
 	// Get all sound hardware
 	vector<wstring> devices = olcNoiseMaker<short>::Enumerate();
 
-	// Display findings
-	for (auto d : devices) wcout << "Found Output Device: " << d << endl;
-	wcout << "Using Device: " << devices[0] << endl;
-
-	// Display a keyboard
-	wcout << endl <<
-		"|   |   |   |   |   | |   |   |   |   | |   | |   |   |   |" << endl <<
-		"|   | S |   |   | F | | G |   |   | J | | K | | L |   |   |" << endl <<
-		"|   |___|   |   |___| |___|   |   |___| |___| |___|   |   |__" << endl <<
-		"|     |     |     |     |     |     |     |     |     |     |" << endl <<
-		"|  Z  |  X  |  C  |  V  |  B  |  N  |  M  |  ,  |  .  |  -  |" << endl <<
-		"|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|" << endl << endl;
-
-
 	// Create sound machine!!
-	olcNoiseMaker<short> sound(devices[0], 44100, 1, 8, 512);
+	olcNoiseMaker<short> sound(devices[0], 44100, 1, 8, 256);
 
 	// Link noise function with sound machine
 	sound.SetUserFunction(MakeNoise);
 
-	char keyboard[129];
-	memset(keyboard, ' ', 127);
-	keyboard[128] = '\0';
+	// Create Screen Buffer
+	wchar_t* screen = new wchar_t[80 * 30];
+	HANDLE hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
+	SetConsoleActiveScreenBuffer(hConsole);
+	DWORD dwBytesWritten = 0;
+
+	// Lambda function to draw into the character array conveniently
+	auto draw = [&screen](int x, int y, wstring s)
+	{
+		for (size_t i = 0; i < s.size(); i++)
+			screen[y * 80 + x + i] = s[i];
+	};
 
 	auto clock_old_time = chrono::high_resolution_clock::now();
 	auto clock_real_time = chrono::high_resolution_clock::now();
 	double dElapsedTime = 0.0;
+	double dWallTime = 0.0;
+
+	// Establish Sequencer
+	synth::sequencer seq(90.0);
+	seq.AddInstrument(&instKick);
+	seq.AddInstrument(&instSnare);
+	seq.AddInstrument(&instHiHat);
+
+	seq.vecChannel.at(0).sBeat = L"X...X...X..X.X..";
+	seq.vecChannel.at(1).sBeat = L"..X...X...X...X.";
+	seq.vecChannel.at(2).sBeat = L"X.X.X.X.X.X.X.XX";
 
 	while (1)
 	{
+		// --- SOUND STUFF ---
+
+		// Update Timings =======================================================================================
+		clock_real_time = chrono::high_resolution_clock::now();
+		auto time_last_loop = clock_real_time - clock_old_time;
+		clock_old_time = clock_real_time;
+		dElapsedTime = chrono::duration<FTYPE>(time_last_loop).count();
+		dWallTime += dElapsedTime;
+		FTYPE dTimeNow = sound.GetTime();
+
+		// Sequencer (generates notes, note offs applied by note lifespan) ======================================
+		int newNotes = seq.Update(dElapsedTime);
+		muxNotes.lock();
+		for (int a = 0; a < newNotes; a++)
+		{
+			seq.vecNotes[a].on = dTimeNow;
+			vecNotes.emplace_back(seq.vecNotes[a]);
+		}
+		muxNotes.unlock();
+
+		// Keyboard (generates and removes notes depending on key state) ========================================
 		for (int k = 0; k < 16; k++)
 		{
 			short nKeyState = GetAsyncKeyState((unsigned char)("ZSXCFVGBNJMK\xbcL\xbe\xbd"[k]));
 
-			double dTimeNow = sound.GetTime();
-
 			// Check if note already exists in currently playing notes
 			muxNotes.lock();
-			auto noteFound = find_if(vecNotes.begin(), vecNotes.end(), [&k](synth::note const& item) { return item.id == k; });
+			auto noteFound = find_if(vecNotes.begin(), vecNotes.end(), [&k](synth::note const& item) { return item.id == k + 64 && item.channel == &instHarm; });
 			if (noteFound == vecNotes.end())
 			{
 				// Note not found in vector
-
 				if (nKeyState & 0x8000)
 				{
 					// Key has been pressed so create a new note
 					synth::note n;
-					n.id = k;
+					n.id = k + 64;
 					n.on = dTimeNow;
-					n.channel = 1;
 					n.active = true;
+					n.channel = &instHarm;
 
 					// Add note to vector
 					vecNotes.emplace_back(n);
-				}
-				else
-				{
-					// Note not in vector, but key has been released...
-					// ...nothing to do
 				}
 			}
 			else
@@ -440,17 +637,54 @@ int main()
 				{
 					// Key has been released, so switch off
 					if (noteFound->off < noteFound->on)
-					{
 						noteFound->off = dTimeNow;
-					}
 				}
 			}
 			muxNotes.unlock();
 		}
-		wcout << "\rNotes: " << vecNotes.size() << "    ";
 
-		//this_thread::sleep_for(5ms);
+		// --- VISUAL STUFF ---
+
+		// Clear Background
+		for (int i = 0; i < 80 * 30; i++) screen[i] = L' ';
+
+		// Draw Sequencer
+		draw(2, 2, L"SEQUENCER:");
+		for (int beats = 0; beats < seq.nBeats; beats++)
+		{
+			draw(beats * seq.nSubBeats + 20, 2, L"O");
+			for (int subbeats = 1; subbeats < seq.nSubBeats; subbeats++)
+				draw(beats * seq.nSubBeats + subbeats + 20, 2, L".");
+		}
+
+		// Draw Sequences
+		int n = 0;
+		for (auto v : seq.vecChannel)
+		{
+			draw(2, 3 + n, v.instrument->name);
+			draw(20, 3 + n, v.sBeat);
+			n++;
+		}
+
+		// Draw Beat Cursor
+		draw(20 + seq.nCurrentBeat, 1, L"|");
+
+		// Draw Keyboard
+		draw(2, 8, L"|   |   |   |   |   | |   |   |   |   | |   | |   |   |   |  ");
+		draw(2, 9, L"|   | S |   |   | F | | G |   |   | J | | K | | L |   |   |  ");
+		draw(2, 10, L"|   |___|   |   |___| |___|   |   |___| |___| |___|   |   |__");
+		draw(2, 11, L"|     |     |     |     |     |     |     |     |     |     |");
+		draw(2, 12, L"|  Z  |  X  |  C  |  V  |  B  |  N  |  M  |  ,  |  .  |  -  |");
+		draw(2, 13, L"|_____|_____|_____|_____|_____|_____|_____|_____|_____|_____|");
+
+		// Draw Stats
+		wstring stats = L"Notes: " + to_wstring(vecNotes.size()) + L" Wall Time: " + to_wstring(dWallTime) + L" CPU Time: " + to_wstring(dTimeNow) + L" Latency: " + to_wstring(dWallTime - dTimeNow);
+		draw(2, 15, stats);
+
+		// Update Display
+		WriteConsoleOutputCharacter(hConsole, screen, 80 * 30, { 0,0 }, &dwBytesWritten);
 	}
+
 
 	return 0;
 }
